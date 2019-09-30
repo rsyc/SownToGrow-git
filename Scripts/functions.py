@@ -6,11 +6,17 @@ Created on Mon Sep 16 07:18:29 2019
 """
 import numpy as np
 import pandas as pd
+import nltk
 from nltk.corpus import stopwords
 from nltk.stem.wordnet import WordNetLemmatizer
 import string
 stop_words = stopwords.words('english')
-stop_words.extend(['from', 'subject', 're', 'edu', 'use', 'not', 'would', 'say', 'could', '_', 'be', 'know', 'good', 'go', 'get', 'do', 'done', 'try', 'many', 'some', 'nice', 'thank', 'think', 'see', 'rather', 'easy', 'easily', 'lot', 'lack', 'make', 'want', 'seem', 'run', 'need', 'even', 'right', 'line', 'even', 'also', 'may', 'take', 'come'])
+stop_words.extend(['from', 'subject', 're', 'edu', 'use', 'not', 'would', 'say',
+                   'could', '_', 'be', 'know', 'good', 'go', 'get', 'do', 'done',
+                   'try', 'many', 'some', 'nice', 'thank', 'think', 'see', 'rather',
+                   'easy', 'easily', 'lot', 'lack', 'make', 'want', 'seem', 'run',
+                   'need', 'even', 'right', 'line', 'even', 'also', 'may', 'take',
+                   'come', 'i','ii','iii','iv','v','vi','th', 'u', 'im', 'th'])
 stop = set(stop_words)
 exclude = set(string.punctuation)
 lemma = WordNetLemmatizer()
@@ -29,19 +35,52 @@ import wikipedia
 
 
 
+
+
 def clean(doc):
     stop_free = " ".join([i for i in doc.lower().split() if i not in stop])
+    #print(stop_free)
+    word=''
+    for ch in stop_free:
+        if ch=='/':
+            ch=' '
+        word+=ch
+    #stop_free = "".join(' ' for ch in stop_free if ch=='/')
+    #print(stop_free)
+
     #print("stop free: ")
     #print (stop_free)
-    punc_free = ''.join(ch for ch in stop_free if ch not in exclude)
+    punc_free = ''.join(ch for ch in word if ch not in exclude)
     #print("punctuation free")
     #print (punc_free)
     num_free= ''.join(ch for ch in punc_free if not ch.isnumeric()) 
     #Abb_free = " ".join([i for i in re.split(r'\s+', punc_free) if i not in stop])
-    #print (Abb_free)
-    normalized = " ".join(lemma.lemmatize(word) for word in num_free.split())
+    onechr_free= ' '.join(ch for ch in num_free.split() if len(ch)>1) 
+    #normalized = " ".join(lemma.lemmatize(word) for word in num_free.split())
+    
+    normalized= " ".join(Abbre_to_complete(word) for word in onechr_free.split())
     return normalized
 
+def process(date):
+     date = date.replace("/", " ")
+     return(date)
+
+def compare_with_RoutinTopics(word):
+    topic_subtopic_Dic={'history':['history', 'government','world','cultures','geography','human', 'civics'], 
+                    'english':['literature','writing','read','reading', 'ela', 'translation', 'english','american','composition','vocabulary'],
+                    'mathematics':['mathematics','algebra','geometry','trigonometry','calculus','prealgebra','analytics','premath','premathmatics','statistics','stat','stats'],
+                    'science':['science','biology', 'chemistry', 'physics', 'environmental', 'physical', 'lab','labs'],
+                    'language':['language', 'lote', 'chinese', 'french','german','hebrew','italian','japanese','korean','latin','spanish','español','irla','Independent Reading Level Assessment','esol'],
+                    'Visual':['visual', 'performing', 'art', 'arts', 'dance', 'drama','theater','theatre', 'music', 'musical','orchestra','choir','photo','video'],
+                    'Physical education':['Physical education','pe', 'soccer','waterpolo', 'yoga','athletics','baseball','cheer','tennis','basketball','gym','training','football']}
+
+    for topics in topic_subtopic_Dic.keys():
+        if word.lower().replace(" ", "") in topic_subtopic_Dic[topics]:
+            output=topics
+            break
+        else:
+            output=word
+    return output
 
 def display_closestwords_tsnescatterplot(model, word):
     
@@ -85,7 +124,29 @@ def display_closestwords_tsnescatterplot(model, word):
         ax.text(x_coords[i], y_coords[i], z_coords[i],  '%s' % (word_labels[i]), size=20, zorder=1,  
                 color='k') '''
 
-    
+def word_frequency(corpus):
+    wordfreq = {}
+    for sentence in corpus:
+        tokens = nltk.word_tokenize(sentence)
+        for token in tokens:
+            if token not in wordfreq.keys():
+                wordfreq[token] = 1
+            else:
+                wordfreq[token] += 1
+    return wordfreq
+
+def find_topic(activity,wordFrequency_refined):
+    tokens = nltk.word_tokenize(activity)
+    frequency=0
+    for i in range(len(tokens)):
+        if tokens[i] in wordFrequency_refined.keys():
+            if wordFrequency_refined[tokens[i]]>frequency:
+                output=tokens[i]
+                frequency=wordFrequency_refined[tokens[i]]
+        else:
+            output=[]
+    return output
+                
     
 def tsne_plot(model):
     "Creates and TSNE model and plots it"
@@ -116,14 +177,25 @@ def tsne_plot(model):
     plt.show()
     
 def Abbre_to_complete(subjects):
-    Abb_dic={'math':'mathematics', 'pe':'Physical_education',
-             'avid':'Advancement_Via_Individual_Determination',
-             'coding':'Computer_programming', 'ela':'Language_arts', 
-             'irla':'Independent Reading Level Assessment', 'ag':'Agricultural_education',
-             'dancepe':'Dance', 'period':'Period_(school)',
-             'social study':'Social_studies', 'pal':'Program for Alternative Learning',
-             'stem':'Science,_technology,_engineering,_and_mathematics',
-             'lote':'Languages_Other_Than_English'}
+    Abb_dic={'calc':'Calculus', 'p e':'pe',
+             'p.e.':'pe', 'dancepe':'dance pe', 'social':'SocialScience',
+             'acc':'accounting'}
+             
+    if subjects in Abb_dic.keys():
+        output=Abb_dic[subjects]
+    else:
+        output=subjects
+    return output
+
+def Satandard_name(subjects):
+    Abb_dic={'math':'mathematics','ap':'Advanced Placement', 'pe':'Physical education', 
+        'coding':'Computer programming', 
+        'irla':'Independent Reading Level Assessment', 'ag':'Agricultural education',
+        'social study':'Social studies', 'pal':'Program for Alternative Learning',
+        'stem':'STEM: Science technology engineering mathematics',
+        'lote':'Languages Other Than English','avid':'Advancement Via Individual Determination',
+        'period':'Period_(school)', 'Visual':'Visual and performing arts'}
+    #'ela':'Language arts', 
     if subjects in Abb_dic.keys():
         output=Abb_dic[subjects]
     else:
