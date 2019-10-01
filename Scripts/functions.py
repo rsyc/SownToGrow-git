@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Sep 16 07:18:29 2019
 
-@author: user1
-"""
 import numpy as np
 import pandas as pd
 import nltk
@@ -189,7 +184,7 @@ def Abbre_to_complete(subjects):
 
 def Satandard_name(subjects):
     Abb_dic={'math':'mathematics','ap':'Advanced Placement', 'pe':'Physical education', 
-        'coding':'Computer programming', 
+        'coding':'Computer programming', 'chem':'chemistry','bio':'biology', 'biol':'biology',
         'irla':'Independent Reading Level Assessment', 'ag':'Agricultural education',
         'social study':'Social studies', 'pal':'Program for Alternative Learning',
         'stem':'STEM: Science technology engineering mathematics',

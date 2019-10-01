@@ -39,58 +39,32 @@ ClassRooms.rename(columns={'id':'classroom_id'}, inplace=True)
 ClassRooms.rename(columns={'name':'classroom_name'}, inplace=True)
 cleaned_class_name=[fun.clean(name) for name in ClassRooms.classroom_name if pandas.notnull(name)]
 
-#ClassID=ClassRooms.id
-#ClassName=ClassRooms.name
 
 Activities=pandas.read_csv('Activities.csv')
 Activities.rename(columns={'id':'activity_id'}, inplace=True)
 Activities.rename(columns={'name':'activity_name'}, inplace=True)
 cleaned_act_name=[fun.clean(name) for name in Activities.activity_name if pandas.notnull(name)]
 
-#ActID=Activities.id
-#ActName=Activities.name
 
 Subjects=pandas.read_csv('Subjects.csv')
 Subjects.rename(columns={'name':'subject_name'}, inplace=True)
 cleaned_sub_name=[fun.clean(name) for name in Subjects.subject_name if pandas.notnull(name)]
-#cleaned_sub_name=[fun.Abbre_to_complete(name) for name in cleaned_sub_name]
-#cleaned_sub_name=[fun.clean(name) for name in cleaned_sub_name]
 
-#Subjects['subject_name']=cleaned_sub_name
+#------------------End of Reading----------------------------------------------
 
-'''ClassRooms_copy = ClassRooms
-ClassRooms_copy = ClassRooms_copy.set_index('classroom_id')
-ClassRooms.columns
-Subjects.columns
-Subjects_copy = Subjects
-Subjects_copy = Subjects_copy.set_index('classroom_id')
-Subjects_copy.index
-
-df5 = pandas.concat([ClassRooms_copy, Subjects_copy], axis=1)
-print (df5)
-df5.to_excel('combined.xlsx')
-
-df4 = pandas.merge(Subjects_copy, ClassRooms_copy, on='classroom_id', how='inner')
-
-df4 = ClassRooms_copy.join(Subjects_copy)
-print (df4)
-df4.to_excel('combined.xlsx')'''
-#ClassID_Sub=Subjects.classroom_id
-#SubName=Subjects.name
-
-#------------------End of Reading-------------------------------------------
-#data_frames=[ActNameID_ClassID_merged, Subjects, ClassRooms]
+#Merging classRooms and Subjects to be used in Subjects to classes.
 data_frames=[ClassRooms, Subjects]
 ClassSub_merged =  pandas.merge(left=ClassRooms,right=Subjects, how='left', left_on='classroom_id', right_on='classroom_id')
-#reduce(lambda  left,right: pandas.merge(left,right,on=['classroom_id'],
-#                                            how='left'), data_frames)
 ClassSub_merged=ClassSub_merged.drop(['Unnamed: 0_x', 'Unnamed: 0_y', 'description'], axis=1)
-#ClassSub_merged.to_excel('combined.xlsx')
+
+
+#Finding Unique subject names / classromm names
 unique_subs=np.unique(cleaned_sub_name)
 unique_classid=np.unique(ClassRooms['classroom_id'])
 
 
-
+#CLEANING:
+#here we keep original subject name in "keys" and cleaned subject names in "vals"
 keys=[]
 vals=[]
 for names in Subjects['subject_name']:
@@ -98,7 +72,7 @@ for names in Subjects['subject_name']:
         keys.append(names) 
         vals.append(fun.clean(names))
         
-    
+#Make disctionary of of subjects {original name: cleaned name}
 subject_dictionary=dict(zip(keys, vals))
 list_val=[]
 for val in subject_dictionary.values(): 
@@ -107,23 +81,22 @@ for val in subject_dictionary.values():
   else:
     list_val.append(val)
     
-list_both=[]#np.column_stack((keys, vals))
+list_both=[]
 for i in range(len(keys)):
     list_both.append([keys[i],vals[i]])
     
-    
+
+# Separating one-word subjects and multi-word subjects   
 new_list_both=[]
 long_subname=[]
 for i in range(len(list_both)):
-    #if list_both[i][0]=='ACC Class':
-        #print(list_both[i][0], list_both[i][1], len(list_both[i][1].split()))
     if len(list_both[i][1].split())>1:
         long_subname.append(list_both[i][1])
         new_list_both.append([list_both[i][0], list_both[i][1]])
-        #if list_both[i][0]=='ACC Class':
-            #print(new_list_both)
         
         
+#Making bag of words using parts of multi-word subjects and finding the frequency
+#of each word in the liast of multi-word subjects    
 wordFrequency=fun.word_frequency(long_subname) 
 wordFrequency_refined={}  
 for key in wordFrequency.keys():
@@ -131,7 +104,8 @@ for key in wordFrequency.keys():
         wordFrequency_refined[key]=wordFrequency[key]
 sorted_wordFrequency=sorted(wordFrequency_refined.items(), key=lambda x: x[1], reverse=True)
 
-
+# Here we select the most frequent words as the most likely topic for multi-word subjects
+# Multi-word subjects are replaced in the original list of subjects with one-word names. 
 for i in range(len(list_both)):
     if len(list_both[i][1].split())>1:
         sub_freq=0
@@ -154,22 +128,21 @@ for i in range(len(list_both)):
         list_both[i][1]=sub_name
     else:
         list_both[i][1]=list_both[i][1].replace(" ", "")
-        
-        
-#new_name_list=[]
-#for i in range(len(list_both)):
-#    new_name_list.append(fun.Satandard_name(list_both[i][1]))
-#len(np.unique(new_name_list))
 
 
-#--------------------------------------------------------
+#------------------------------------------------------------------------------
+#List of subject names are compared against dictionary of standard school subjects 
+#and list of school abbreviations so abbreviation are replaced with complete form
+#and to find a main topic if they are subtopics of a main school topic, e.g. biology
+#is included in science subject at schools
+        
 for i in range(len(list_both)):
-    list_both[i][1]=fun.compare_with_RoutinTopics(list_both[i][1])#.replace(" ", ""))
+    list_both[i][1]=fun.compare_with_RoutinTopics(fun.Satandard_name(list_both[i][1]))#.replace(" ", ""))
     
 
 for i in range(len(list_both)):
     list_both[i][1]=fun.Satandard_name(list_both[i][1].replace(" ", ""))
-    #print(list_both[i][0])
+
 new_name_list=[]
 for i in range(len(list_both)):
     new_name_list.append(list_both[i][1])
@@ -179,7 +152,7 @@ counts=Counter(new_name_list).values() # counts the elements' frequency
 sorted_subFrequency=sorted(Counter(new_name_list).items(), key=lambda x: x[1], reverse=True)
 
 
-
+#Check if class names would help in grouping similar subjects
 df_Sub_both=pandas.DataFrame(list_both)
 df_Sub_both.columns=['subject_name','Refined_sub_name']
 df_Sub_both.insert(0, 'classroom_id',Subjects['classroom_id'] , True) 
@@ -201,6 +174,34 @@ for i in range(len(sorted_subFrequency)):
                 
         except KeyError:
             continue'''
+            
+#-----------------------------user interface-----------------------------------
+user_input=input("Enter subject/activity name: ")
+user_input=fun.clean(user_input)
+if len(user_input)>1:
+    sub_freq=0
+    length=0
+    sub_name= ''
+    for items in user_input.split():
+        item_trans=fun.compare_with_RoutinTopics(fun.Satandard_name(items.replace(" ", "")))
+        if item_trans in names:
+            for i in range(len(sorted_subFrequency)):
+                if item_trans==sorted_subFrequency[i][0] and sorted_subFrequency[i][1]>sub_freq:
+                    sub_freq=sorted_subFrequency[i][1]
+                    sub_name= item_trans
+                    length=len(item_trans)
+                    original=fun.Satandard_name(items.replace(" ", ""))
+                
+        elif len(sub_name)==0:
+            sub_name= sub_name+' '+item_trans
+            original=sub_name
+                
+        output=sub_name
+else:
+    output=user_input.replace(" ", "")
+print ("Your standard subject name is: ", original)
+print ("Your subject belong to this general topic: ", output)
+
 #--------------------------------Plots-----------------------------------------
 count=Subjects['subject_name'].value_counts()
 df1 = pandas.DataFrame({ 'Topic name':count.index, 'Frequency':count.values})
@@ -270,6 +271,8 @@ plt.xticks(y_pos, xlable, rotation=90)
 plt.title('')
 plt.xlabel('')
 plt.ylabel('Topic appearance rate in data')
+
+
 #------------------------save to excel file------------------------------------
 # Create a Pandas Excel writer using XlsxWriter as the engine.
 writer = pandas.ExcelWriter('Topics.xlsx', engine='xlsxwriter')
@@ -281,26 +284,5 @@ df1.to_excel(writer,sheet_name='Result',startrow=1 , startcol=0)
 worksheet.write_string(df1.shape[0] + 4, 0, df2.name)
 df2.to_excel(writer,sheet_name='Result',startrow=1, startcol=df1.shape[1] + 2)
 
-# Write each dataframe to a different worksheet.
-#df1.to_excel(writer, sheet_name='Sheet1')
-#df2.to_excel(writer, sheet_name='Sheet2')
-
-# Close the Pandas Excel writer and output the Excel file.
 writer.save()
 
-'''#----------------------------prediction of activity topic-------------------
-glove2word2vec(glove_input_file="glove.6B.100d.txt", word2vec_output_file="gensim_glove_vectors.txt")
-glove_model = KeyedVectors.load_word2vec_format("gensim_glove_vectors.txt", binary=False)
-for i in range(0,10):
-    activity= cleaned_act_name[i]
-    topic=fun.find_topic(activity,wordFrequency_refined)
-    if len(topic)==0:
-        tokens = nltk.word_tokenize(activity)
-        for token in tokens: 
-            try:
-                most_similar=glove_model.similar_by_word(ps.stem(token), topn=10)
-                topic=fun.find_topic(most_similar[0],wordFrequency_refined)
-            except KeyError:
-                
-'''
-  
