@@ -54,6 +54,8 @@ def clean(doc):
     #normalized = " ".join(lemma.lemmatize(word) for word in num_free.split())
     
     normalized= " ".join(Abbre_to_complete(word) for word in onechr_free.split())
+    if normalized=='language art' or normalized=='language arts':
+        normalized='languageArt'
     return normalized
 
 def process(date):
@@ -62,7 +64,7 @@ def process(date):
 
 def compare_with_RoutinTopics(word):
     topic_subtopic_Dic={'history':['history', 'government','world','cultures','geography','human', 'civics'], 
-                    'english':['literature','writing','read','reading', 'ela', 'translation', 'english','american','composition','vocabulary'],
+                    'english':['literature','writing','read','reading', 'ela', 'translation', 'english','american','composition','vocabulary','languageart'],
                     'mathematics':['mathematics','algebra','geometry','trigonometry','calculus','prealgebra','analytics','premath','premathmatics','statistics','stat','stats'],
                     'science':['science','biology', 'chemistry', 'physics', 'environmental', 'physical', 'lab','labs'],
                     'language':['language', 'lote', 'chinese', 'french','german','hebrew','italian','japanese','korean','latin','spanish','español','irla','Independent Reading Level Assessment','esol'],
@@ -175,6 +177,36 @@ def Abbre_to_complete(subjects):
     Abb_dic={'calc':'Calculus', 'p e':'pe',
              'p.e.':'pe', 'dancepe':'dance pe', 'social':'SocialScience',
              'acc':'accounting'}
+             
+    if subjects in Abb_dic.keys():
+        output=Abb_dic[subjects]
+    else:
+        output=subjects
+    return output
+
+def Abbre_to_complete2(subjects):
+    Abb_dic={'calc':'Calculus', 'p e':'pe', 'ap':'Advanced Placement',
+             'p.e.':'pe', 'dancepe':'dance pe', 'social':'SocialScience',
+             'acc':'accounting','acc':'accounting','bio':'biology','ag':'Agricultural education',
+             'coding':'Computer programming', 'chem':'chemistry', 'bio':'biology',
+             'biol':'biology', 'irla':'Independent Reading Level Assessment',
+             'visual':'Visual and performing arts'}
+             
+    if subjects in Abb_dic.keys():
+        output=Abb_dic[subjects]
+    else:
+        output=subjects
+    return output
+
+def Abbre_to_WikiName(subjects):
+    Abb_dic={'calc':'Calculus', 'pe':'Physical_education', 'social':'Social_science',
+             'accounting':'Accounting', 'math':'Mathematics','Advanced Placement':'Advanced_Placement', 
+             'Computer programming':'Computer_programming', 'chemistry':'Chemistry','biology':'Biology',
+             'Agricultural education':'Agricultural_education',
+             'social study':'Social_studies',
+             'stem':'Science,_technology,_engineering,_and_mathematics',
+             'lote':'Languages_Other_Than_English','avid':'Advancement_Via_Individual_Determination',
+             'period':'Period_(school)', 'Visual and performing arts':'Performing arts'}
              
     if subjects in Abb_dic.keys():
         output=Abb_dic[subjects]

@@ -175,7 +175,7 @@ for i in range(len(sorted_subFrequency)):
         except KeyError:
             continue'''
 #------------------------------------------------------------------------------
-for inputs in Subjects['subject_name'][0:10]:
+'''for inputs in Subjects['subject_name'][0:10]:
     sub_freq=0
     length=0
     sub_name= ''
@@ -205,7 +205,7 @@ for inputs in Subjects['subject_name'][0:10]:
         output=fun.compare_with_RoutinTopics(fun.Satandard_name(inputs.replace(" ", "")))
     
     print ("Your standard subject name is: ", original)
-    print ("Your subject belong to this general topic: ", output)
+    print ("Your subject belong to this general topic: ", output)'''
             
 #-----------------------------user interface-----------------------------------
 user_input=input("Enter subject/activity name: ")
