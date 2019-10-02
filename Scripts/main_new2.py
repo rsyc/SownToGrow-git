@@ -174,11 +174,43 @@ for i in range(len(sorted_subFrequency)):
                 
         except KeyError:
             continue'''
+#------------------------------------------------------------------------------
+for inputs in Subjects['subject_name'][0:10]:
+    sub_freq=0
+    length=0
+    sub_name= ''
+    print("What you entered: ", inputs)
+    inputs=fun.clean(inputs)
+    if len(inputs.split())>1:
+        sub_freq=0
+        length=0
+        sub_name= ''
+        for items in inputs.split():
+            item_trans=fun.compare_with_RoutinTopics(fun.Satandard_name(items.replace(" ", "")))
+            if item_trans in names:
+                for i in range(len(sorted_subFrequency)):
+                    if item_trans==sorted_subFrequency[i][0] and sorted_subFrequency[i][1]>sub_freq:
+                        sub_freq=sorted_subFrequency[i][1]
+                        sub_name= item_trans
+                        length=len(item_trans)
+                        original=fun.Satandard_name(items.replace(" ", ""))
+                
+            elif len(sub_name)==0:
+                sub_name= sub_name+' '+item_trans
+                original=sub_name
+                
+            output=sub_name
+    else:
+        original = fun.Satandard_name(inputs.replace(" ", ""))
+        output=fun.compare_with_RoutinTopics(fun.Satandard_name(inputs.replace(" ", "")))
+    
+    print ("Your standard subject name is: ", original)
+    print ("Your subject belong to this general topic: ", output)
             
 #-----------------------------user interface-----------------------------------
 user_input=input("Enter subject/activity name: ")
 user_input=fun.clean(user_input)
-if len(user_input)>1:
+if len(user_input.split())>1:
     sub_freq=0
     length=0
     sub_name= ''
@@ -198,7 +230,8 @@ if len(user_input)>1:
                 
         output=sub_name
 else:
-    output=user_input.replace(" ", "")
+    original = fun.Satandard_name(user_input.replace(" ", ""))
+    output=output=fun.compare_with_RoutinTopics(fun.Satandard_name(user_input.replace(" ", "")))
 print ("Your standard subject name is: ", original)
 print ("Your subject belong to this general topic: ", output)
 

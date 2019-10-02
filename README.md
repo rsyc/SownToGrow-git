@@ -1,4 +1,4 @@
-#---SCHOOL SUBJECT MAPPING---
+#---SCHOOL SUBJECT MAPPER---
 
 The code in this repository is in Python.
 
