@@ -3,7 +3,7 @@
 The code in this repository is in Python.
 
 ## Project description
-Sown to Grow (www.sowntogrow.com/) has created an online educational platform to help students improve their learning skills. This company wanted to keep it flexible for teachers specially at the begining of launching the product across country. So tecahers had the freedom to enter subject names in any forms they wanted that ended up having unstructured unorganized freeform text for subjects. 
+Sown to Grow (www.sowntogrow.com/) has created an online educational platform to help students improve their learning skills. This company wanted to keep it flexible for teachers specially at the beginning of launching the product across country. So teachers had the freedom to enter subject names in any forms they wanted that ended up having unstructured unorganized free form text for subjects. 
 This project is about grouping these unstructured subject names into a standardized list of subjects, so then the company would be able to map activities, subjects and classes to this standardized list or groups of subjects. This will be used in future when students' progress has been analysed and best effective activity is needed to be selected and suggested to students for improvement. 
 
 ## The data
@@ -11,6 +11,7 @@ This project is about grouping these unstructured subject names into a standardi
 Data was provided as csv files (5 files: "Classrooms", "Subjects", "Activities", "ClassroomActivityMapping", "ClassroomTimePeriods") by the company. "Subjects" file, which is the main file used in this project included about 7k subject names entered by different teachers across different schools in US. 
 
 ## Solution
+
 ### Cleaning
 Data cleaning (removing stop words, punctuations, numbers, one charecters), 
 Making bag of words for multi-word subjects and find the most frequent words,
