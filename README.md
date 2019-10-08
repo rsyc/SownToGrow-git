@@ -1,4 +1,4 @@
-#---SCHOOL SUBJECT MAPPER---
+#---Subject Matters:  put your classes into classes---
 
 The code in this repository is in Python.
 
