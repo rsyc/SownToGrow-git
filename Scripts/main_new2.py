@@ -21,7 +21,14 @@ import matplotlib.colors as mcolors
 import nltk
 from nltk.stem import PorterStemmer    
 ps = PorterStemmer() 
-from collections import Counter
+from collections import Counter,defaultdict
+from nltk.stem.wordnet import WordNetLemmatizer
+lemma = WordNetLemmatizer()
+from itertools import cycle
+from sklearn.manifold import TSNE
+
+
+
 
 
 cols = [color for name, color in mcolors.TABLEAU_COLORS.items()]  # more colors: 'mcolors.XKCD_COLORS'
@@ -70,7 +77,7 @@ vals=[]
 for names in Subjects['subject_name']:
     if len(names)!=0: #and "_" not in names:
         keys.append(names) 
-        vals.append(fun.clean(names))
+        vals.append(lemma.lemmatize(fun.Abbre_to_complete(fun.clean(names))))
         
 #Make disctionary of of subjects {original name: cleaned name}
 subject_dictionary=dict(zip(keys, vals))
@@ -112,7 +119,7 @@ for i in range(len(list_both)):
         length=0
         sub_name= ''
         for items in list_both[i][1].split():
-            item_trans=fun.compare_with_RoutinTopics(items.replace(" ", ""))
+            item_trans=items#fun.compare_with_RoutinTopics(items)
             if item_trans in wordFrequency_refined.keys():
                 if wordFrequency_refined[item_trans]>sub_freq:
                     sub_freq=wordFrequency_refined[item_trans]
@@ -127,11 +134,130 @@ for i in range(len(list_both)):
                 
         list_both[i][1]=sub_name
     else:
-        list_both[i][1]=list_both[i][1].replace(" ", "")
+        list_both[i][1]=list_both[i][1]#.replace(" ", "")
+        
+#-------------------------------------NLP:Vord2Vec-----------------------------
+new_name_list=[]
+for i in range(len(list_both)):
+    new_name_list.append(list_both[i][1])
+unique_subs=np.unique(new_name_list)
+Counter(new_name_list)
+#importing pretranied word2vec model 
+glove2word2vec(glove_input_file="glove.6B.100d.txt", word2vec_output_file="gensim_glove_vectors.txt")
+glove_model = KeyedVectors.load_word2vec_format("gensim_glove_vectors.txt", binary=False)
+#fun.tsne_plot(glove_model)
+
+#Here we find the vector belong to each subject name using the pretrained word2vec model
+#the ones that cannot be found are saved into "notfound" set to be used later.
+tokens=[]
+labels=[]
+notfound=[]
+for i in range(len(unique_subs)):
+    word=unique_subs[i]
+    try:
+        tokens.append(glove_model[word])
+        labels.append(word)
+        #most_similar=glove_model.similar_by_word(ps.stem(list_both[i][1]), topn=10)
+        #print(most_similar[0])
+        #for j in range(len(most_similar)):
+                
+    except KeyError:
+        word=unique_subs[i].replace(" ", "")
+        try:
+            tokens.append(glove_model[word])
+            labels.append(word)
+        except KeyError:
+            notfound.append(word)
+            #continue
+            
+#Using subject tokens (vector velues) we find the optimized number of cluster
+# that can very well define our data.
+centers, clusters = fun.clustering_on_wordvecs(tokens, 10)
+centroid_map = dict(zip(labels, clusters))
+top_words = fun.get_top_words(labels, 10, centers, np.array(tokens)) 
+
+'''dic_names= defaultdict(list)
+dic_values= defaultdict(list)
+for word1 in labels:
+    for word2 in labels:
+        cosine_similarity= glove_model.similarity(word1, word2)
+        dic_names[word1].append(word2)
+        dic_values[word1].append(cosine_similarity)
+        #cosine_similarity = np.dot(glove_model[word1], glove_model[word2])/(np.linalg.norm(glove_model[word1])* np.linalg.norm(glove_model[word2]))
+    #max(i for i in dic_values[word1] if i!=1)
+    for i in range(len(dic_values[word1])):
+        if dic_values[word1][i]>=0.65:
+           print(dic_values[word1][i], dic_names[word1][i])'''
+
+# Here for a subject name we find the best cluster it can be assigned to by finding
+# the max average similarity value computed by function: "find_wordCluster"
+# Then the frequency of the subject/cluster is recorded
+Subject_cluster=defaultdict(list)
+Subject_cluster_freq={}
+for subject_names in new_name_list:
+    Selected_cluster=fun.find_wordCluster(glove_model,top_words,subject_names)
+    if subject_names not in  Subject_cluster.keys():
+        Subject_cluster_freq[subject_names]=1
+        Subject_cluster[subject_names].append(Selected_cluster)
+    else:
+        Subject_cluster_freq[subject_names]+=1
 
 
-#------------------------------------------------------------------------------
-#List of subject names are compared against dictionary of standard school subjects 
+#here we find how the data is distrubuted among different clusters
+# subject names not found by pretrained model are all gathers in a group name "OTHERS
+clusterFreq={}
+notfound_freq={}
+AllClusterNames=list(top_words.keys())
+AllClusterNames.append('OTHERS')
+for cluster in AllClusterNames:
+    clusterFreq[cluster]=0
+    for subject_names in Subject_cluster.keys():#new_name_list:
+        if Subject_cluster[subject_names][0][0]==cluster: #in list(top_words[cluster]):
+            clusterFreq[cluster]+=Subject_cluster_freq[subject_names]/len(Subjects)*100#1
+sorted(clusterFreq.items(), key=lambda x: x[1], reverse=True)
+
+for subject_names in new_name_list:
+    if (subject_names in notfound) and subject_names not in notfound_freq.keys():
+        notfound_freq[subject_names]=1
+    elif subject_names in notfound:
+        notfound_freq[subject_names]+=1       
+    
+#______________________________________________________________________________           
+#____________________________word2vec VISUALIZATION:____________________________________
+#______________________________________________________________________________           
+#fun.tsne_plot2(tokens,labels)
+
+cmaps = cycle([
+            'flag', 'prism', 'ocean', 'gist_earth', 'terrain', 'gist_stern',
+            'gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg', 'hsv',
+            'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar'])
+for i in range(len(centers)-1):
+    col = next(cmaps)
+    #plt.figure(i)
+    fun.display_cloud(i+1, col,top_words)
+
+embedding_clusters = []
+word_clusters = []
+for word in labels:
+    embeddings = []
+    words = []
+    for similar_word, _ in glove_model.most_similar(word, topn=10):
+        words.append(similar_word)
+        embeddings.append(glove_model[similar_word])
+    embedding_clusters.append(embeddings)
+    word_clusters.append(words)
+embedding_clusters = np.array(embedding_clusters)
+n, m, k = embedding_clusters.shape
+tsne_model_en_2d = TSNE(perplexity=40, n_components=2, init='pca', n_iter=2500, random_state=32)
+#embeddings_en_2d = np.array(tsne_model_en_2d.fit_transform(embedding_clusters.reshape(n * m, k))).reshape(n, m, 2)
+    
+#fun.tsne_plot_similar_words('Similar words', labels, embeddings_en_2d, word_clusters, 0.7,
+ #                       'similar_words.png')
+#______________________________________________________________________________
+
+
+#------------------------------ Validation ------------------------------------
+# Here List of subject names are compared against dictionary of standard school subjects 
 #and list of school abbreviations so abbreviation are replaced with complete form
 #and to find a main topic if they are subtopics of a main school topic, e.g. biology
 #is included in science subject at schools
@@ -150,7 +276,11 @@ len(np.unique(new_name_list))
 names=Counter(new_name_list).keys() # equals to list(set(words))
 counts=Counter(new_name_list).values() # counts the elements' frequency
 sorted_subFrequency=sorted(Counter(new_name_list).items(), key=lambda x: x[1], reverse=True)
-
+subject_length=len(sorted_subFrequency)
+sorted_subFrequency2=[]
+for i in range(subject_length):
+    if sorted_subFrequency[i][1]>1:
+        sorted_subFrequency2.append(sorted_subFrequency[i])
 
 #Check if class names would help in grouping similar subjects
 df_Sub_both=pandas.DataFrame(list_both)
@@ -163,17 +293,7 @@ for i in unique_classid:
     sub_set=list(ref_sub_df.loc[df_Sub_both['classroom_id'] == i, 'Refined_sub_name'])
     ClassSub_dic[i]=[sub_set]'''
     
-'''glove2word2vec(glove_input_file="glove.6B.100d.txt", word2vec_output_file="gensim_glove_vectors.txt")
-glove_model = KeyedVectors.load_word2vec_format("gensim_glove_vectors.txt", binary=False)
-for i in range(len(sorted_subFrequency)):
-    if sorted_subFrequency[i][1]<=1:
-        try:
-            most_similar=glove_model.similar_by_word(ps.stem(sorted_subFrequency[i][0]), topn=10)
-            print(most_similar[0])
-            #for j in range(len(most_similar)):
-                
-        except KeyError:
-            continue'''
+
 #------------------------------------------------------------------------------
 '''for inputs in Subjects['subject_name'][0:10]:
     sub_freq=0
@@ -206,10 +326,11 @@ for i in range(len(sorted_subFrequency)):
     
     print ("Your standard subject name is: ", original)
     print ("Your subject belong to this general topic: ", output)'''
-            
+                
 #-----------------------------user interface-----------------------------------
-user_input=input("Enter subject/activity name: ")
+'''user_input=input("Enter subject/activity name: ")
 user_input=fun.clean(user_input)
+user_input=fun.Abbre_to_complete(user_input)
 if len(user_input.split())>1:
     sub_freq=0
     length=0
@@ -233,9 +354,25 @@ else:
     original = fun.Satandard_name(user_input.replace(" ", ""))
     output=output=fun.compare_with_RoutinTopics(fun.Satandard_name(user_input.replace(" ", "")))
 print ("Your standard subject name is: ", original)
-print ("Your subject belong to this general topic: ", output)
+print ("Your subject belong to this general topic: ", output)'''
 
 #--------------------------------Plots-----------------------------------------
+plt.figure()
+plt.bar(*zip(*clusterFreq.items()))
+y_pos = range(len(clusterFreq.items()))
+plt.ylabel("Frequency of subject names (%)", fontsize=20)
+plt.xticks(y_pos, clusterFreq.keys(), fontsize=20, rotation=90)
+plt.tight_layout()
+
+
+plt.figure()
+plt.bar(*zip(*notfound_freq.items()))
+y_pos = range(len(notfound_freq.items()))
+plt.ylabel("Frequency of not-found subject names (%)", fontsize=18)
+plt.xticks(y_pos, notfound_freq.keys(),fontsize=18, rotation=90)
+plt.tight_layout()
+
+
 count=Subjects['subject_name'].value_counts()
 df1 = pandas.DataFrame({ 'Topic name':count.index, 'Frequency':count.values})
 df1.name = "Raw Topics"
@@ -246,7 +383,7 @@ dff.plot(kind='bar',alpha=1.0)
 plt.xlabel("")
 
 
-df2 = pandas.DataFrame(sorted_subFrequency) #just creating the dataframe
+df2 = pandas.DataFrame(sorted_subFrequency2)#sorted_subFrequency) #just creating the dataframe
 df2.columns=['Topic name','Frequency']
 df2.name = "Final Topics"
 criteria = df2[ df2.iloc[:,1]>= 50 ] 
@@ -285,13 +422,13 @@ plt.ylabel('Total number of Unique Topics')
 
 
 unique_count=[]
-for i in range(len(sorted_subFrequency)):
-    unique_count.append(sorted_subFrequency[i][1])
+for i in range(len(sorted_subFrequency2)):
+    unique_count.append(sorted_subFrequency2[i][1])
 appearance_num=np.zeros((len(np.unique(unique_count)),2), dtype=int)
 for i in range(len(np.unique(unique_count))):
     appearance_num[i][0]=np.unique(unique_count)[i]
-    for j in range(len(sorted_subFrequency)):
-        if sorted_subFrequency[j][1]== np.unique(unique_count)[i]:
+    for j in range(len(sorted_subFrequency2)):
+        if sorted_subFrequency2[j][1]== np.unique(unique_count)[i]:
             appearance_num[i][1]+=1
 y_plot=[]
 for i in range(len(appearance_num)):
